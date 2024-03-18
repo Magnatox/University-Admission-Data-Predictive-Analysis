@@ -118,6 +118,8 @@ from sklearn import metrics
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor 
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.neighbors import KNeighborsRegressor
+import xgboost as xg
 
 
 # Split the data
@@ -125,152 +127,85 @@ from sklearn.ensemble import RandomForestRegressor
 X=admission_df.drop(['Chance of Admit '],axis=1)
 y=admission_df['Chance of Admit ']
 
+
+
 #train test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Linear Regression
+# Model initialization
+models = [
+    ("KNN", KNeighborsRegressor(n_neighbors=3)),
+    ("Linear Regression", LinearRegression()),
+    ("Decision Tree", DecisionTreeRegressor()),
+    ("Random Forest", RandomForestRegressor(n_estimators = 100)),
+    ("XGBoost", xg.XGBRegressor(objective ='reg:linear', n_estimators = 10))
+]
 
-# create a linear regression object
-lr=LinearRegression()
-# fit the model
-lr.fit(X_train,y_train)
-# predict the values for test data
-pred1 = lr.predict(X_test)
 
-# Model Evaluation
+# Model training and evaluation
 
-# Regression Score of the model
-print('Linear Regression')
-print('Score For Train Data : {}'.format(lr.score(X_train,y_train)))
-print('Score For Test Data : {}'.format(lr.score(X_test,y_test)))
 
-print('The mean absolute error:', metrics.mean_absolute_error(y_test, pred1))
-print('The mean squared error:', metrics.mean_squared_error(y_test, pred1))
-print('The root mean squared error:', np.sqrt(metrics.mean_squared_error(y_test, pred1)))
-print('\n')
+results = []
+for name, model in models:
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    score_For_Train_Data = round(model.score(X_train,y_train)* 100,2)
+    score_For_Test_Data = round(model.score(X_test,y_test)*100,2)
+    improvement_rate = (score_For_Test_Data/score_For_Train_Data)-1
+    mean_absolute_error = metrics.mean_absolute_error(y_test,y_pred)
+    mean_squared_error = metrics.mean_squared_error(y_test,y_pred)
+    root_mean_squared_error = np.sqrt(metrics.mean_squared_error(y_test,y_pred))
+    print(name)
+    print('Score For Train Data : {}'.format(model.score(X_train,y_train)))
+    print('Score For Test Data : {}'.format(model.score(X_test,y_test)))
+    print('The mean absolute error:', metrics.mean_absolute_error(y_test, y_pred))
+    print('The mean squared error:', metrics.mean_squared_error(y_test, y_pred))
+    print('The root mean squared error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred)))
+    print('\n')
+    results.append((name,score_For_Train_Data,score_For_Test_Data,improvement_rate,mean_absolute_error,mean_squared_error,root_mean_squared_error))
+    sns.scatterplot(x=y_test, y=y_pred)
+    plt.xlabel('y_test')
+    plt.ylabel('predictions')
+    plt.title('Actual test data vs Model predictions - {}'.format(name))
+    plt.show()
 
-# Plot showacasing the how well model fitted on testing data
-sns.scatterplot(x=y_test, y=pred1)
-plt.xlabel('y_test')
-plt.ylabel('predictions')
-plt.title('Actual test data vs Model predictions - Linear Regression')
+results_df = pd.DataFrame(results, columns=["Model","Train_Data_Score","Test_Data_Score","improvement_rate","Mean Absolute Error","Mean Squared Error","Root Mean Squared Error"])
+results_df = results_df.sort_values(by='Test_Data_Score', ascending=False)
+
+# Plotting results
+plt.figure(figsize=(12, 8))
+ax = sns.barplot(x='Model', y="Train_Data_Score", data=results_df)
+for p in ax.patches:
+    ax.annotate(f'{p.get_height()}%', (p.get_x() + p.get_width() / 2., p.get_height()),
+                ha='center', va='center', fontsize=12, color='black', xytext=(0, 5),
+                textcoords='offset points')
+plt.title("Model Train Data Score Comparison")
+plt.xlabel("Model")
+plt.ylabel("Train Data Score")
+plt.xticks(rotation=45)
 plt.show()
 
+#%%
 
-# Decision Tree Regression
-
-# create a regressor object
-DTR = DecisionTreeRegressor() 
-# fit the model
-DTR.fit(X_train,y_train)
-# predict the values for test data
-pred2 = DTR.predict(X_test)
-
-# Model Evaluation
-
-# Regression Score of the model
-print('Decision Tree Regression')
-print('Score For Train Data : {}'.format(DTR.score(X_train,y_train)))
-print('Score For Test Data : {}'.format(DTR.score(X_test,y_test)))
-
-print('The mean absolute error:', metrics.mean_absolute_error(y_test, pred2))
-print('The mean squared error:', metrics.mean_squared_error(y_test, pred2))
-print('The root mean squared error:', np.sqrt(metrics.mean_squared_error(y_test, pred2)))
-print('\n')
-
-# Plot showacasing the how well model fitted on testing data
-sns.scatterplot(x=y_test, y=pred2)
-plt.xlabel('y_test')
-plt.ylabel('predictions')
-plt.title('Actual test data vs Model predictions - Decision Tree Regression')
+plt.figure(figsize=(12, 8))
+ax = sns.barplot(x='Model', y="Test_Data_Score", data=results_df)
+for p in ax.patches:
+    ax.annotate(f'{p.get_height()}%', (p.get_x() + p.get_width() / 2., p.get_height()),
+                ha='center', va='center', fontsize=12, color='black', xytext=(0, 5),
+                textcoords='offset points')
+plt.title("Model Test Data Score Comparison")
+plt.xlabel("Model")
+plt.ylabel("Test Data Score")
+plt.xticks(rotation=45)
 plt.show()
 
-# Random Forest Regression
-
-# create regressor object
-RFreg = RandomForestRegressor(n_estimators = 100)
-
-# fit the regressor with x and y data
-RFreg.fit(X_train,y_train) 
-# predict the values for test data
-pred3 = RFreg.predict(X_test)
-
-# Model Evaluation
-
-# Regression Score of the model
-print('Random Forest Regression')
-print('Score For Train Data : {}'.format(RFreg.score(X_train,y_train)))
-print('Score For Test Data : {}'.format(RFreg.score(X_test,y_test)))
-
-print('The mean absolute error:', metrics.mean_absolute_error(y_test, pred3))
-print('The mean squared error:', metrics.mean_squared_error(y_test, pred3))
-print('The root mean squared error:', np.sqrt(metrics.mean_squared_error(y_test, pred3)))
-print('\n')
-
-# Plot showacasing the how well model fitted on testing data
-sns.scatterplot(x=y_test, y=pred3)
-plt.xlabel('y_test')
-plt.ylabel('predictions')
-plt.title('Actual test data vs Model predictions - Random Forest Regression')
+#%%
+plt.figure(figsize=(12, 8))
+sns.barplot(data=results_df, x="Model", y="improvement_rate")
+plt.title('Improvement Rate of Regression Models')
+plt.xlabel('Model')
+plt.ylabel('Improvement Rate')
+plt.xticks(rotation=45)
 plt.show()
-
-# KNN
-
-from sklearn.neighbors import KNeighborsRegressor
-# create KKNeighborsRegressor object with initial value of n =2
-KNneigh = KNeighborsRegressor(n_neighbors=2)
-
-# fit the regressor with x and y data
-KNneigh.fit(X_train,y_train)
-# predict the values for test data
-pred4 = KNneigh.predict(X_test)
-
-# Model Evaluation
-
-# Regression Score of the model
-print('KNN')
-print('Score For Train Data : {}'.format(KNneigh.score(X_train,y_train)))
-print('Score For Test Data : {}'.format(KNneigh.score(X_test,y_test)))
-
-print('The mean absolute error:', metrics.mean_absolute_error(y_test, pred4))
-print('The mean squared error:', metrics.mean_squared_error(y_test, pred4))
-print('The root mean squared error:', np.sqrt(metrics.mean_squared_error(y_test, pred4)))
-print('\n')
-
-# Plot showacasing the how well model fitted on testing data
-sns.scatterplot(x=y_test, y=pred4)
-plt.xlabel('y_test')
-plt.ylabel('predictions')
-plt.title('Actual test data vs Model predictions - KNN')
-plt.show()
-
-# XGBoost Regression
-
-import xgboost as xg
-# create xgboost object with initial value of n estimators =10
-xgb_reg = xg.XGBRegressor(objective ='reg:linear', n_estimators = 10)
-
-# fit the regressor with x and y data
-xgb_reg.fit(X_train,y_train)
-# predict the values for test data
-pred5 = xgb_reg.predict(X_test)
-
-# Regression Score of the model
-print('XGBoost Regression')
-print('Score For Train Data : {}'.format(xgb_reg.score(X_train,y_train)))
-print('Score For Test Data : {}'.format(xgb_reg.score(X_test,y_test)))
-
-print('The mean absolute error:', metrics.mean_absolute_error(y_test, pred5))
-print('The mean squared error:', metrics.mean_squared_error(y_test, pred5))
-print('The root mean squared error:', np.sqrt(metrics.mean_squared_error(y_test, pred5)))
-print('\n')
-
-# Plot showacasing the how well model fitted on testing data
-sns.scatterplot(x=y_test, y=pred5)
-plt.xlabel('y_test')
-plt.ylabel('predictions')
-plt.title('Actual test data vs Model predictions - XGBoost Regression')
-plt.show()
-
 
 # %%
