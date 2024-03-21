@@ -209,3 +209,22 @@ plt.xticks(rotation=45)
 plt.show()
 
 # %%
+import joblib
+
+
+# Save the model
+joblib.dump(model, 'linear_regression_model.pkl')
+
+
+# Load the model
+loaded_model = joblib.load('linear_regression_model.pkl')
+
+# example input data for prediction
+new_data = [[320, 90, 4.5, 5, 4, 9.0, 1]]
+
+# Predicttion
+prediction = loaded_model.predict(new_data)
+
+print("Predicted Chance of Admit:", prediction)
+
+# %%
